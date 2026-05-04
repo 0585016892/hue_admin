@@ -1,4 +1,99 @@
-*{
-  margin: 0;
-  padding: 0;
+/* App.css */
+
+/* --- Hiệu ứng Hover cho thanh Menu --- */
+.nav-links .nav-item {
+  cursor: pointer;
+  transition: color 0.3s ease;
+  position: relative;
+}
+
+.nav-links .nav-item:hover {
+  color: #1677ff !important; /* medicalBlue */
+}
+
+.nav-links .nav-item::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: -5px;
+  left: 0;
+  background-color: #1677ff;
+  transition: width 0.3s ease;
+}
+
+.nav-links .nav-item:hover::after {
+  width: 100%;
+}
+
+/* --- Hiệu ứng Hover cho Service Cards --- */
+.service-card {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease !important;
+}
+
+.service-card:hover {
+  transform: translateY(-12px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.1) !important;
+}
+
+.service-card .icon-wrapper {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.service-card:hover .icon-wrapper {
+  background-color: #1677ff !important;
+  color: #fff !important;
+}
+
+/* --- Hiệu ứng Rung (Pulse) cho nút Gọi trong Hero --- */
+@keyframes pulse-border {
+  0% {
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(22, 119, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0);
+  }
+}
+
+.btn-hero-primary {
+  animation: pulse-border 2s infinite;
+}
+
+/* --- Hiệu ứng Rung (Pulse) cho Icon trong Modal --- */
+@keyframes pulse-icon {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0.5);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 15px rgba(22, 119, 255, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(22, 119, 255, 0);
+  }
+}
+
+.pulse-icon {
+  animation: pulse-icon 2s infinite cubic-bezier(0.455, 0.03, 0.515, 0.955);
+}
+
+/* --- Hiệu ứng Rung (Pulse) cho nút CTA chính --- */
+.btn-cta-pulse {
+    transition: all 0.3s ease !important;
+}
+.btn-cta-pulse:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(22, 119, 255, 0.4) !important;
+}
+
+/* --- Custom Modal Styling --- */
+.beauty-modal .ant-modal-content {
+  border-radius: 24px !important;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.15) !important;
 }

@@ -5,13 +5,24 @@ import {
 import { 
   UserOutlined, SearchOutlined, PlusOutlined, 
   EditOutlined, DeleteOutlined, MailOutlined, 
-  PhoneOutlined, TeamOutlined 
+  PhoneOutlined, TeamOutlined, FilterOutlined
 } from "@ant-design/icons";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import doctorApi from "../api/doctorApi";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
+// Danh sách Role để dùng chung cho Filter và Form
+const ROLE_LIST = [
+  { id: 1, name: "Quản trị viên", color: "red" },
+  { id: 2, name: "Bác sĩ", color: "blue" },
+  { id: 3, name: "Nhân sự", color: "green" },
+  { id: 4, name: "Bảo vệ", color: "default" },
+  { id: 5, name: "Y tá", color: "purple" },
+];
+
+const DEPARTMENTS = ["Nội tổng quát", "Tim mạch", "Da liễu", "Nhi", "Sản - Phụ khoa"];
 
 const Doctors = () => {
   const [data, setData] = useState([]);
@@ -19,32 +30,46 @@ const Doctors = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [total, setTotal] = useState(0);
+  
+  // States cho Bộ lọc
   const [search, setSearch] = useState("");
+  const [filterRole, setFilterRole] = useState(null); // Mặc định là null (Tất cả)
+  const [filterDept, setFilterDept] = useState(null);
+
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const res = await doctorApi.getAll({
-        page,
-        limit,
-        search,
-        role_id: 2,
-      });
-      setData(res.data.data);
-      setTotal(res.data.pagination?.total || 0);
-    } catch (err) {
-      message.error("Không thể tải danh sách bác sĩ");
-    } finally {
-      setLoading(false);
-    }
-  };
+ const fetchData = useCallback(async () => {
+  setLoading(true);
+  try {
+    // Kiểm tra xem các giá trị này có bị undefined không
+    console.log("Params gửi đi:", { 
+      page, 
+      search, 
+      role_id: filterRole, 
+      department: filterDept 
+    });
 
+    const res = await doctorApi.getAll({
+      page,
+      limit,
+      search: search || undefined, // Tránh gửi chuỗi rỗng nếu backend không xử lý
+      role_id: filterRole || undefined, // Nếu là null thì không gửi hoặc backend hiểu là "Tất cả"
+      department: filterDept || undefined,
+    });
+    
+    setData(res.data.data);
+    setTotal(res.data.pagination?.total || 0);
+  } catch (err) {
+    message.error("Không thể tải danh sách");
+  } finally {
+    setLoading(false);
+  }
+}, [page, limit, search, filterRole, filterDept]); // Rất quan trọng: Phải có đủ dependency ở đây
   useEffect(() => {
     fetchData();
-  }, [page, search]);
+  }, [fetchData]);
 
   const handleSubmit = async (values) => {
     try {
@@ -52,8 +77,8 @@ const Doctors = () => {
         await doctorApi.update(editingId, values);
         message.success("Cập nhật thông tin thành công");
       } else {
-        await doctorApi.create({ ...values, role_id: 2 });
-        message.success("Đã thêm bác sĩ vào hệ thống");
+        await doctorApi.create(values); // role_id giờ lấy từ form
+        message.success("Đã thêm nhân sự vào hệ thống");
       }
       setOpen(false);
       form.resetFields();
@@ -82,22 +107,25 @@ const Doctors = () => {
 
   const columns = [
     {
-      title: "Bác sĩ",
-      key: "doctor_info",
+      title: "Nhân sự",
+      key: "user_info",
       render: (_, record) => (
         <Space size="middle">
-          <Avatar 
-            src={record.avatar} 
-            icon={<UserOutlined />} 
-            style={{ backgroundColor: "#1890ff" }} 
-            size={40}
-          />
+          <Avatar src={record.avatar} icon={<UserOutlined />} size={40} />
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <Text strong style={{ color: "#1890ff" }}>{record.full_name}</Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>ID: {record.id}</Text>
+            <Text strong>{record.full_name}</Text>
+            <Tag color={ROLE_LIST.find(r => r.id === record.role_id)?.color} style={{ fontSize: 10, width: 'fit-content', lineHeight: '16px' }}>
+              {ROLE_LIST.find(r => r.id === record.role_id)?.name || "N/A"}
+            </Tag>
           </div>
         </Space>
       ),
+    },
+    {
+      title: "Chuyên khoa",
+      dataIndex: "department",
+      key: "department",
+      render: (dept) => dept ? <Tag color="cyan">{dept}</Tag> : <Text type="secondary">-</Text>,
     },
     {
       title: "Liên hệ",
@@ -110,30 +138,12 @@ const Doctors = () => {
       ),
     },
     {
-      title: "Chuyên khoa",
-      dataIndex: "department",
-      key: "department",
-      render: (dept) => {
-        let color = "blue";
-        if (dept === "Nhi") color = "orange";
-        if (dept === "Tim mạch") color = "volcano";
-        if (dept === "Da liễu") color = "magenta";
-        return <Tag color={color} style={{ borderRadius: 10, padding: "0 10px" }}>{dept}</Tag>;
-      },
-    },
-    {
       title: "Thao tác",
       align: "center",
       render: (_, record) => (
         <Space>
           <Button type="text" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
-          <Popconfirm
-            title="Xóa bác sĩ?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true }}
-          >
+          <Popconfirm title="Xóa nhân sự này?" onConfirm={() => handleDelete(record.id)} okButtonProps={{ danger: true }}>
             <Button type="text" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -143,41 +153,63 @@ const Doctors = () => {
 
   return (
     <Card bordered={false}>
+      {/* Header */}
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>
           <Space>
             <TeamOutlined style={{ fontSize: 24, color: "#1890ff" }} />
-            <Title level={4} style={{ margin: 0 }}>Quản lý Đội ngũ Bác sĩ</Title>
+            <Title level={4} style={{ margin: 0 }}>Quản lý Nhân sự & Bác sĩ</Title>
           </Space>
         </Col>
         <Col>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            size="large"
-            onClick={() => {
-              setEditingId(null);
-              form.resetFields();
-              setOpen(true);
-            }}
-          >
-            Thêm bác sĩ mới
+          <Button type="primary" icon={<PlusOutlined />} size="large" onClick={() => { setEditingId(null); form.resetFields(); setOpen(true); }}>
+            Thêm nhân sự mới
           </Button>
         </Col>
       </Row>
 
-      <Card size="small" style={{ marginBottom: 16, background: "#f9f9f9" }}>
-        <Input
-          placeholder="Tìm bác sĩ theo tên, email hoặc SĐT..."
-          prefix={<SearchOutlined />}
-          size="large"
-          allowClear
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          style={{ maxWidth: 450 }}
-        />
+      {/* Filter Area */}
+      <Card size="small" style={{ marginBottom: 16, background: "#f9f9f9", border: "1px solid #eee" }}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} md={8}>
+            <Input
+              placeholder="Tìm kiếm tên, email, SĐT..."
+              prefix={<SearchOutlined />}
+              size="large"
+              allowClear
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            />
+          </Col>
+          <Col xs={12} md={5}>
+            <Select
+              placeholder="Lọc theo Chức vụ"
+              size="large"
+              style={{ width: '100%' }}
+              allowClear
+              onChange={(val) => { setFilterRole(val); setPage(1); }}
+            >
+              {ROLE_LIST.map(role => (
+                <Option key={role.id} value={role.id}>{role.name}</Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={12} md={5}>
+            <Select
+              placeholder="Lọc Chuyên khoa"
+              size="large"
+              style={{ width: '100%' }}
+              allowClear
+              onChange={(val) => { setFilterDept(val); setPage(1); }}
+            >
+              {DEPARTMENTS.map(dept => (
+                <Option key={dept} value={dept}>{dept}</Option>
+              ))}
+            </Select>
+          </Col>
+          <Col>
+             <Text type="secondary"><FilterOutlined /> Tìm thấy {total} kết quả</Text>
+          </Col>
+        </Row>
       </Card>
 
       <Table
@@ -190,45 +222,32 @@ const Doctors = () => {
           pageSize: limit,
           total,
           onChange: (p) => setPage(p),
+          showSizeChanger: false
         }}
       />
 
+      {/* Modal Form */}
       <Modal
-        title={
-          <Title level={4} style={{ margin: 0 }}>
-            {editingId ? "📝 Chỉnh sửa thông tin bác sĩ" : "👨‍⚕️ Khai báo hồ sơ bác sĩ"}
-          </Title>
-        }
+        title={editingId ? "📝 Chỉnh sửa thông tin" : "👤 Thêm nhân sự mới"}
         open={open}
         onCancel={() => setOpen(false)}
         onOk={() => form.submit()}
         width={650}
         centered
       >
-        <Divider style={{ margin: "12px 0" }} />
-        <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 10 }}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ marginTop: 15 }}>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="full_name"
-                label={<Text strong>Họ tên bác sĩ</Text>}
-                rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}
-              >
-                <Input placeholder="BS. Nguyễn Văn A" size="large" />
+              <Form.Item name="full_name" label="Họ và tên" rules={[{ required: true }]}>
+                <Input size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="department"
-                label={<Text strong>Chuyên khoa</Text>}
-                rules={[{ required: true, message: "Chọn chuyên khoa" }]}
-              >
-                <Select size="large" placeholder="Chọn chuyên khoa">
-                  <Option value="Nội tổng quát">Nội tổng quát</Option>
-                  <Option value="Tim mạch">Tim mạch</Option>
-                  <Option value="Da liễu">Da liễu</Option>
-                  <Option value="Nhi">Nhi</Option>
-                  <Option value="Sản - Phụ khoa">Sản - Phụ khoa</Option>
+              <Form.Item name="role_id" label="Chức vụ/Vai trò" rules={[{ required: true }]}>
+                <Select size="large">
+                  {ROLE_LIST.map(role => (
+                    <Option key={role.id} value={role.id}>{role.name}</Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -236,35 +255,28 @@ const Doctors = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="email"
-                label={<Text strong>Email liên hệ</Text>}
-                rules={[
-                  { required: true, message: "Nhập email" },
-                  { type: "email", message: "Email không hợp lệ" }
-                ]}
-              >
-                <Input prefix={<MailOutlined />} size="large" placeholder="doctor@hospital.com" />
+              <Form.Item name="department" label="Chuyên khoa (Nếu có)">
+                <Select size="large" allowClear>
+                  {DEPARTMENTS.map(dept => (
+                    <Option key={dept} value={dept}>{dept}</Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="phone"
-                label={<Text strong>Số điện thoại</Text>}
-                rules={[{ pattern: /^[0-9]+$/, message: "SĐT chỉ được chứa số" }]}
-              >
-                <Input prefix={<PhoneOutlined />} size="large" placeholder="09xxxxxxxx" />
+              <Form.Item name="phone" label="Số điện thoại">
+                <Input size="large" />
               </Form.Item>
             </Col>
           </Row>
 
+          <Form.Item name="email" label="Email" rules={[{ required: true, type: "email" }]}>
+            <Input size="large" />
+          </Form.Item>
+
           {!editingId && (
-            <Form.Item
-              name="password"
-              label={<Text strong>Mật khẩu hệ thống</Text>}
-              rules={[{ required: true, min: 6, message: "Mật khẩu ít nhất 6 ký tự" }]}
-            >
-              <Input.Password size="large" placeholder="Thiết lập mật khẩu đăng nhập" />
+            <Form.Item name="password" label="Mật khẩu" rules={[{ required: true, min: 6 }]}>
+              <Input.Password size="large" />
             </Form.Item>
           )}
         </Form>

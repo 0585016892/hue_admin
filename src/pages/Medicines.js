@@ -14,11 +14,13 @@ import {
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import medicineApi from "../api/medicineApi";
+import { useUser } from "../context/UserContext";
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
 
 const Medicines = () => {
+  const {user} = useUser();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -80,83 +82,124 @@ const Medicines = () => {
     }
   };
 
-  const columns = [
-    {
-      title: "Thông tin thuốc",
-      key: "medicine_info",
-      width: 250,
-      render: (_, record) => (
-        <Space direction="vertical" size={0}>
-          <Text strong style={{ fontSize: '15px', color: '#1677ff' }}>{record.medicine_name}</Text>
-          <Text type="secondary" style={{ fontSize: '12px' }}>Mã: MED-{record.id}</Text>
-        </Space>
-      ),
+const columns = [
+  {
+    title: "Thông tin thuốc",
+    key: "medicine_info",
+    width: 250,
+    render: (_, record) => (
+      <Space direction="vertical" size={0}>
+        <Text strong style={{ fontSize: '15px', color: '#1677ff' }}>
+          {record.medicine_name}
+        </Text>
+        <Text type="secondary" style={{ fontSize: '12px' }}>
+          Mã: MED-{record.id}
+        </Text>
+      </Space>
+    ),
+  },
+  {
+    title: "Đơn vị",
+    dataIndex: "unit",
+    key: "unit",
+    render: (unit) => {
+      let color =
+        unit === "Chai"
+          ? "magenta"
+          : unit === "Vỉ"
+          ? "cyan"
+          : "blue";
+
+      return (
+        <Tag color={color} style={{ borderRadius: "4px" }}>
+          {unit || "Viên"}
+        </Tag>
+      );
     },
-    {
-      title: "Đơn vị",
-      dataIndex: "unit",
-      key: "unit",
-      render: (unit) => {
-        let color = unit === 'Chai' ? 'magenta' : unit === 'Vỉ' ? 'cyan' : 'blue';
-        return <Tag color={color} style={{ borderRadius: '4px' }}>{unit || 'Viên'}</Tag>;
-      },
-    },
-    {
-      title: "Giá bán",
-      dataIndex: "price",
-      align: "right",
-      render: (v) => <Text strong color="green">{new Intl.NumberFormat('vi-VN').format(v)} ₫</Text>,
-    },
-    {
-      title: "Tồn kho",
-      dataIndex: "stock",
-      align: "center",
-      render: (stock) => (
-        stock < 10 ? (
-          <Badge count={<WarningOutlined style={{ color: '#f5222d' }} />} offset={[5, 0]}>
-            <Tag color="error" style={{ minWidth: '60px', textAlign: 'center', borderRadius: '12px' }}>
-              {stock}
-            </Tag>
-          </Badge>
-        ) : (
-          <Tag color="success" style={{ minWidth: '60px', textAlign: 'center', borderRadius: '12px' }}>
+  },
+  {
+    title: "Giá bán",
+    dataIndex: "price",
+    align: "right",
+    render: (v) => (
+      <Text strong style={{ color: "green" }}>
+        {new Intl.NumberFormat("vi-VN").format(v)} ₫
+      </Text>
+    ),
+  },
+  {
+    title: "Tồn kho",
+    dataIndex: "stock",
+    align: "center",
+    render: (stock) =>
+      stock < 10 ? (
+        <Badge
+          count={<WarningOutlined style={{ color: "#f5222d" }} />}
+          offset={[5, 0]}
+        >
+          <Tag
+            color="error"
+            style={{
+              minWidth: "60px",
+              textAlign: "center",
+              borderRadius: "12px",
+            }}
+          >
             {stock}
           </Tag>
-        )
+        </Badge>
+      ) : (
+        <Tag
+          color="success"
+          style={{
+            minWidth: "60px",
+            textAlign: "center",
+            borderRadius: "12px",
+          }}
+        >
+          {stock}
+        </Tag>
       ),
-    },
-    {
-      title: "Mô tả / Ghi chú",
-      dataIndex: "note",
-      ellipsis: true,
-      render: (text) => <Text type="secondary">{text || '---'}</Text>
-    },
-    {
-      title: "Thao tác",
-      key: "actions",
-      align: "center",
-      render: (_, record) => (
-        <Space size="middle">
-          <Button 
-            type="text" 
-            icon={<EditOutlined />} 
-            style={{ color: "#1890ff" }}
-            onClick={() => handleEdit(record)} 
-          />
-          <Popconfirm
-            title="Xóa loại thuốc này?"
-            description="Dữ liệu này sẽ không thể khôi phục."
-            onConfirm={() => handleDelete(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
-            okButtonProps={{ danger: true, size: 'small' }}
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+  },
+  {
+    title: "Mô tả / Ghi chú",
+    dataIndex: "note",
+    ellipsis: true,
+    render: (text) => <Text type="secondary">{text || "---"}</Text>,
+  },
+
+  // 🔥 Chỉ admin mới có cột thao tác
+  ...(user?.role === "admin"
+    ? [
+        {
+          title: "Thao tác",
+          key: "actions",
+          align: "center",
+          render: (_, record) => (
+            <Space size="middle">
+              <Button
+                type="text"
+                icon={<EditOutlined />}
+                style={{ color: "#1890ff" }}
+                onClick={() => handleEdit(record)}
+              />
+
+              <Popconfirm
+                title="Xóa loại thuốc này?"
+                description="Dữ liệu này sẽ không thể khôi phục."
+                onConfirm={() => handleDelete(record.id)}
+                okText="Xóa"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true, size: "small" }}
+              >
+                <Button type="text" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            </Space>
+          ),
+        },
+      ]
+    : []),
+];
 
   return (
     <div style={{ padding: '24px', background: '#f5f7fa', minHeight: '100vh' }}>
@@ -183,6 +226,7 @@ const Medicines = () => {
             </Space>
           </Col>
           <Col>
+          {user.role === "admin" && (
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -196,6 +240,7 @@ const Medicines = () => {
             >
               Thêm thuốc mới
             </Button>
+          )}
           </Col>
         </Row>
 

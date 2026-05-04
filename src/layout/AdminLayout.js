@@ -1,44 +1,54 @@
+import React, { useState } from "react";
 import { Layout, ConfigProvider } from "antd";
+import { Outlet } from "react-router-dom";   // 👈 thêm dòng này
 import Sidebar from "./Sidebar";
 import HeaderBar from "./HeaderBar";
 
 const { Content } = Layout;
 
-const AdminLayout = ({ children }) => {
+const AdminLayout = () => {   // ❌ bỏ children
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    // ConfigProvider giúp tùy chỉnh màu sắc chủ đạo toàn hệ thống (Brand Color)
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: "#1890ff", // Màu xanh y tế đặc trưng
+          colorPrimary: "#1890ff",
           borderRadius: 8,
         },
       }}
     >
       <Layout style={{ minHeight: "100vh" }}>
-        {/* Thanh điều hướng bên trái */}
-        <Sidebar />
+        <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
-        {/* Khối nội dung bên phải - Cần dịch sang phải một khoảng bằng độ rộng Sidebar */}
-        <Layout style={{ marginLeft: 260, transition: "all 0.2s" }}>
-          <HeaderBar />
+        <Layout
+          style={{
+            marginLeft: collapsed ? 80 : 260,
+            transition: "all 0.2s ease-in-out",
+          }}
+        >
+          <HeaderBar collapsed={collapsed} setCollapsed={setCollapsed} />
 
           <Content
             style={{
               margin: "24px 24px",
               padding: 24,
               minHeight: 280,
-              background: "#fff", // Nội dung chính nằm trên nền trắng
-              borderRadius: "12px", // Bo góc nhẹ cho hiện đại
+              background: "#fff",
+              borderRadius: "12px",
               boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.03)",
-              overflow: "initial",
             }}
           >
-            {children}
+            <Outlet />   {/* 👈 QUAN TRỌNG */}
           </Content>
 
-          {/* Footer nhỏ phía dưới cùng */}
-          <footer style={{ textAlign: "center", paddingBottom: 20, color: "#bfbfbf" }}>
+          <footer
+            style={{
+              textAlign: "center",
+              paddingBottom: 20,
+              color: "#bfbfbf",
+            }}
+          >
             Hệ thống Quản lý Bệnh viện ©2026 - Phát triển bởi Đội ngũ IT Medical
           </footer>
         </Layout>

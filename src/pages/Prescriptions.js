@@ -14,11 +14,12 @@ import appointmentApi from "../api/appointmentApi";
 import medicineApi from "../api/medicineApi";
 import doctorApi from "../api/doctorApi";
 import invoiceApi from "../api/invoiceApi";
-
+import { useUser } from "../context/UserContext";
 const { Option } = Select;
 const { Title, Text } = Typography;
 
 const Prescriptions = () => {
+  const {user} = useUser();
   const [data, setData] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [medicines, setMedicines] = useState([]);
@@ -111,27 +112,44 @@ console.log(data);
         </Tag>
       )
     },
-    {
-      title: "Hành động",
-      align: "center",
-      render: (_, record) => (
-        <Space>
-          <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(record.prescription_id)}>Chi tiết</Button>
-          <Popconfirm title="Xác nhận xóa đơn thuốc?" onConfirm={() => prescriptionApi.remove(record.prescription_id).then(fetchData)}>
-            <Button danger icon={<DeleteOutlined />} />
-          </Popconfirm>
-        </Space>
-      )
-    },
+   {
+  title: "Hành động",
+  align: "center",
+  render: (_, record) => (
+    <Space>
+      <Button
+        icon={<EyeOutlined />}
+        onClick={() => handleViewDetail(record.prescription_id)}
+      >
+        Chi tiết
+      </Button>
+
+      {user?.role === "admin" && (
+        <Popconfirm
+          title="Xác nhận xóa đơn thuốc?"
+          onConfirm={() =>
+            prescriptionApi
+              .remove(record.prescription_id)
+              .then(fetchData)
+          }
+        >
+          <Button danger icon={<DeleteOutlined />} />
+        </Popconfirm>
+      )}
+    </Space>
+  ),
+}
   ];
 
   return (
     <Card bordered={false}>
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col><Title level={4}><FileTextOutlined /> Quản lý đơn thuốc</Title></Col>
+        {user.role === "admin" && (
         <Col>
           <Button type="primary" icon={<PlusOutlined />} size="large" onClick={() => setOpen(true)}>Kê đơn mới</Button>
         </Col>
+        )}
       </Row>
 
       <Table dataSource={data} columns={columns} rowKey="prescription_id" loading={loading} />
@@ -225,14 +243,29 @@ console.log(data);
         open={openDetail}
         onCancel={() => setOpenDetail(false)}
         width={700}
-        footer={[
-          <Button key="print" icon={<PrinterOutlined />} onClick={() => window.print()}>In đơn thuốc</Button>,
-          detail?.info?.status !== "approved" && (
-            <Button key="inv" type="primary" icon={<ShoppingCartOutlined />} onClick={() => convertInvoice(detail?.info?.prescription_id)}>
-              Duyệt & Chuyển Hóa Đơn
-            </Button>
-          )
-        ]}
+       footer={[
+          <Button
+            key="print"
+            icon={<PrinterOutlined />}
+            onClick={() => window.print()}
+          >
+            In đơn thuốc
+          </Button>,
+
+          user?.role === "admin" &&
+            detail?.info?.status !== "approved" && (
+              <Button
+                key="inv"
+                type="primary"
+                icon={<ShoppingCartOutlined />}
+                onClick={() =>
+                  convertInvoice(detail?.info?.prescription_id)
+                }
+              >
+                Duyệt & Chuyển Hóa Đơn
+              </Button>
+            )
+        ].filter(Boolean)}
       >
         {detail ? (
           <div id="print-area">

@@ -22,11 +22,12 @@ import {
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import patientApi from "../api/patientApi";
-
+import { useUser } from "../context/UserContext";
 const { Title } = Typography;
 const { Option } = Select;
 
 const Patients = () => {
+  const {user} = useUser();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -136,6 +137,7 @@ const Patients = () => {
             onClick={() => handleEdit(record)}
           >
           </Button>
+          {user?.role === "admin" && (
           <Popconfirm
             title="Xóa bệnh nhân"
             description="Bạn có chắc chắn muốn xóa bệnh nhân này khỏi hệ thống?"
@@ -147,6 +149,7 @@ const Patients = () => {
             <Button type="link" danger icon={<DeleteOutlined />}>
             </Button>
           </Popconfirm>
+          )}
         </Space>
       ),
     },
@@ -156,6 +159,7 @@ const Patients = () => {
     <Card bordered={false}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <Title level={4} style={{ margin: 0 }}>📋 Danh sách bệnh nhân</Title>
+        {user.role === "admin" && (
         <Button
           type="primary"
           icon={<UserAddOutlined />}
@@ -168,6 +172,7 @@ const Patients = () => {
         >
           Thêm bệnh nhân mới
         </Button>
+        )}
       </div>
 
       {/* 🔍 BỘ LỌC */}

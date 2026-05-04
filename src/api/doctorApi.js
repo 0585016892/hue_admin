@@ -3,7 +3,8 @@ import axiosClient from "./axiosClient";
 const doctorApi = {
   getAll: (params) =>
     axiosClient.get("/doctors/", { params }),
-
+  getDoctorDash: () =>
+    axiosClient.get("/doctors/dashboard"),
   getById: (id) =>
     axiosClient.get(`/doctors/${id}`),
 

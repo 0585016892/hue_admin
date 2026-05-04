@@ -1,16 +1,15 @@
-import { Card, Row, Col, Table, Statistic, Typography, Space, Tag } from "antd";
+import {
+  Card, Row, Col, Table, Statistic, Typography, Spin, Tag, Badge, Avatar,Space
+} from "antd";
 import { useEffect, useState } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid,
-  BarChart, Bar, ResponsiveContainer,
+  AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
+  BarChart, Bar, ResponsiveContainer, Cell
 } from "recharts";
-import { 
-  UserOutlined, 
-  CalendarOutlined, 
-  FileTextOutlined, 
-  DollarCircleOutlined, 
-  WarningOutlined,
-  ArrowUpOutlined
+import {
+  UserOutlined, CalendarOutlined, FileTextOutlined,
+  DollarCircleOutlined, WarningOutlined, MedicineBoxOutlined,
+  TeamOutlined, RiseOutlined
 } from "@ant-design/icons";
 
 import dashboardApi from "../api/dashboardApi";
@@ -18,6 +17,7 @@ import dashboardApi from "../api/dashboardApi";
 const { Title, Text } = Typography;
 
 const Dashboard = () => {
+  const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState({});
   const [revenue, setRevenue] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -26,96 +26,148 @@ const Dashboard = () => {
 
   const fetchData = async () => {
     try {
+      setLoading(true);
       const [o, r, p, l, t] = await Promise.all([
         dashboardApi.getOverview(),
-        dashboardApi.revenueByDay(),
-        dashboardApi.patientsByDay(),
-        dashboardApi.lowStock(),
+        dashboardApi.revenueLast7Days(),
+        dashboardApi.patientsLast7Days(),
+        dashboardApi.lowStockMedicines(),
         dashboardApi.topMedicines(),
       ]);
 
-      setOverview(o.data.data);
-      setRevenue(r.data.data.reverse());
-      setPatients(p.data.data.reverse());
-      setLowStock(l.data.data);
-      setTopMedicines(t.data.data);
+      const overviewData = o.data?.data || {};
+      overviewData.totalRevenue = Number(overviewData.totalRevenue || 0);
+
+      setOverview(overviewData);
+      setRevenue(r.data?.data || []);
+      setPatients(p.data?.data || []);
+      setLowStock(l.data?.data || []);
+      setTopMedicines(t.data?.data || []);
     } catch (err) {
-      console.error("Lỗi khi tải dữ liệu dashboard:", err);
+      console.error("Lỗi dashboard:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  // Format tiền tệ VNĐ
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0);
-  };
+  const formatCurrency = (value) =>
+    new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value || 0);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <Spin size="large" tip="Đang tải dữ liệu..." />
+      </div>
+    );
+  }
+
+  // Phân nhóm chỉ số để hiển thị đẹp hơn
+  const mainStats = [
+    { title: "Doanh thu", value: overview.totalRevenue, icon: <DollarCircleOutlined />, color: "#52c41a", isMoney: true, desc: "Tổng thu hiện tại" },
+    { title: "Bệnh nhân", value: overview.totalPatients, icon: <UserOutlined />, color: "#1890ff", desc: "Hồ sơ đã đăng ký" },
+    { title: "Lịch hẹn", value: overview.totalAppointments, icon: <CalendarOutlined />, color: "#722ed1", desc: "Đã lên lịch khám" },
+    { title: "Sắp hết thuốc", value: overview.lowStockMedicines, icon: <WarningOutlined />, color: "#ff4d4f", desc: "Cần nhập thêm kho" },
+  ];
+
+  const secondaryStats = [
+    { title: "Bác sĩ", value: overview.totalDoctors, icon: <TeamOutlined />, color: "#13c2c2" },
+    { title: "Tổng thuốc", value: overview.totalMedicines, icon: <MedicineBoxOutlined />, color: "#fa8c16" },
+    { title: "Đơn thuốc", value: overview.totalPrescriptions, icon: <FileTextOutlined />, color: "#2f54eb" },
+    { title: "Hóa đơn", value: overview.totalInvoices, icon: <RiseOutlined />, color: "#eb2f96" },
+  ];
 
   return (
-    <div style={{ paddingBottom: 20 }}>
+    <div style={{ padding: "0px" }}>
       <div style={{ marginBottom: 24 }}>
-        <Title level={3}>📊 Bảng điều khiển tổng quát</Title>
-        <Text type="secondary">Cập nhật tình hình bệnh viện trong 24h qua</Text>
+        <Title level={3} style={{ margin: 0 }}>🏥 Trung tâm Điều hành</Title>
+        <Text type="secondary">Cập nhật dữ liệu thời gian thực của bệnh viện</Text>
       </div>
 
-      {/* 🚀 STATISTIC CARDS */}
+      {/* ====== HIGHLIGHT STATS ====== */}
       <Row gutter={[16, 16]}>
-        {[
-          { title: "Bệnh nhân", value: overview.totalPatients, icon: <UserOutlined />, color: "#1890ff" },
-          { title: "Lịch hẹn", value: overview.totalAppointments, icon: <CalendarOutlined />, color: "#722ed1" },
-          { title: "Đơn thuốc", value: overview.totalPrescriptions, icon: <FileTextOutlined />, color: "#2f54eb" },
-          { title: "Doanh thu", value: overview.totalRevenue, icon: <DollarCircleOutlined />, color: "#52c41a", isMoney: true },
-          { title: "Sắp hết thuốc", value: overview.lowStockMedicines, icon: <WarningOutlined />, color: "#ff4d4f" },
-        ].map((item, idx) => (
-          <Col xs={24} sm={12} md={8} lg={4} xl={idx === 4 ? 4 : 5} key={idx}>
-            <Card bordered={false} className="stat-card" style={{ boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
-              <Statistic
-                title={<Text type="secondary" strong>{item.title.toUpperCase()}</Text>}
-                value={item.value}
-                formatter={(val) => item.isMoney ? formatCurrency(val) : val}
-                valueStyle={{ color: item.color, fontWeight: 700 }}
-                prefix={item.icon}
-              />
-              <div style={{ marginTop: 8 }}>
-                <Tag color="green"><ArrowUpOutlined /> 12%</Tag>
-                <Text type="secondary" style={{ fontSize: 12 }}>so với tháng trước</Text>
+        {mainStats.map((item, index) => (
+          <Col xs={24} sm={12} lg={6} key={index}>
+            <Card bordered={false} hoverable style={{ borderRadius: 16, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <Avatar 
+                    size={54} 
+                    icon={item.icon} 
+                    style={{ backgroundColor: `${item.color}15`, color: item.color, borderRadius: 12 }} 
+                />
+                <Statistic
+                  title={<Text type="secondary" strong>{item.title.toUpperCase()}</Text>}
+                  value={item.value || 0}
+                  formatter={(val) => item.isMoney ? formatCurrency(val) : val}
+                  valueStyle={{ color: '#1f1f1f', fontWeight: 800, fontSize: 22 }}
+                />
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <Badge color={item.color} text={item.desc} />
               </div>
             </Card>
           </Col>
         ))}
       </Row>
 
+      {/* ====== SECONDARY STATS (Mini Cards) ====== */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        {secondaryStats.map((item, index) => (
+          <Col xs={12} sm={6} key={index}>
+            <Card bordered={false} bodyStyle={{ padding: '16px 24px' }} style={{ borderRadius: 12, background: '#fafafa' }}>
+              <Statistic
+                title={<span style={{ fontSize: 13 }}>{item.title}</span>}
+                value={item.value || 0}
+                valueStyle={{ fontSize: 18, fontWeight: 700 }}
+                prefix={<span style={{ color: item.color, marginRight: 8 }}>{item.icon}</span>}
+              />
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* ====== CHARTS SECTION ====== */}
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        {/* 📈 REVENUE CHART */}
-        <Col span={24} lg={12}>
-          <Card title="💰 Xu hướng doanh thu (7 ngày)" bordered={false}>
-            <div style={{ width: '100%', height: 300 }}>
+        <Col span={24} lg={15}>
+          <Card title={<Space><DollarCircleOutlined /> Biểu đồ doanh thu 7 ngày gần nhất</Space>} bordered={false} style={{ borderRadius: 16 }}>
+            <div style={{ height: 350, width: '100%' }}>
               <ResponsiveContainer>
-                <LineChart data={revenue}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="date" />
-                  <YAxis tickFormatter={(value) => `${value/1000000}M`} />
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
-                  <Line type="monotone" dataKey="revenue" stroke="#1890ff" strokeWidth={3} dot={{ r: 6 }} activeDot={{ r: 8 }} />
-                </LineChart>
+                <AreaChart data={revenue}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#1890ff" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#1890ff" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#8c8c8c'}} />
+                  <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `${v/1000000}M`} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                    formatter={(v) => [formatCurrency(v), "Doanh thu"]} 
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#1890ff" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </Card>
         </Col>
 
-        {/* 👨‍⚕️ PATIENTS CHART */}
-        <Col span={24} lg={12}>
-          <Card title="👨‍⚕️ Lượng bệnh nhân tiếp nhận" bordered={false}>
-            <div style={{ width: '100%', height: 300 }}>
+        <Col span={24} lg={9}>
+          <Card title={<Space><UserOutlined /> Lượng bệnh nhân mới</Space>} bordered={false} style={{ borderRadius: 16 }}>
+            <div style={{ height: 350, width: '100%' }}>
               <ResponsiveContainer>
                 <BarChart data={patients}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="date" />
-                  <YAxis />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} />
+                  <YAxis axisLine={false} tickLine={false} />
                   <Tooltip cursor={{fill: '#f5f5f5'}} />
-                  <Bar dataKey="total" fill="#52c41a" radius={[4, 4, 0, 0]} barSize={40} />
+                  <Bar dataKey="total" radius={[4, 4, 0, 0]}>
+                    {patients.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={index === patients.length - 1 ? '#52c41a' : '#d9f7be'} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -123,49 +175,31 @@ const Dashboard = () => {
         </Col>
       </Row>
 
+      {/* ====== TABLES SECTION ====== */}
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        {/* 💊 TOP MEDICINES */}
-        <Col span={24} xl={12}>
-          <Card title="💊 Thuốc sử dụng nhiều nhất" bordered={false}>
+        <Col span={24} lg={12}>
+          <Card title="🏆 Top dược phẩm tin dùng" bordered={false} style={{ borderRadius: 16 }} bodyStyle={{ padding: 0 }}>
             <Table
               dataSource={topMedicines}
               rowKey="medicine_name"
-              pagination={{ pageSize: 5 }}
-              size="middle"
+              pagination={false}
               columns={[
-                { title: "Tên Thuốc", dataIndex: "medicine_name", render: (text) => <Text strong color="blue">{text}</Text> },
-                { 
-                  title: "Số lượng dùng", 
-                  dataIndex: "total_used", 
-                  sorter: (a, b) => a.total_used - b.total_used,
-                  render: (val) => <Tag color="blue">{val} đơn vị</Tag> 
-                },
+                { title: "Dược phẩm", dataIndex: "medicine_name", render: (text) => <Text strong>{text}</Text> },
+                { title: "Mức sử dụng", dataIndex: "total_used", align: 'right', render: (val) => <Tag color="blue" style={{ borderRadius: 10 }}>{val} đơn</Tag> },
               ]}
             />
           </Card>
         </Col>
 
-        {/* ⚠️ LOW STOCK */}
-        <Col span={24} xl={12}>
-          <Card title="⚠️ Cảnh báo tồn kho thấp" bordered={false}>
+        <Col span={24} lg={12}>
+          <Card title="🚨 Cảnh báo tồn kho thấp" bordered={false} style={{ borderRadius: 16 }} bodyStyle={{ padding: 0 }}>
             <Table
               dataSource={lowStock}
               rowKey="id"
-              pagination={{ pageSize: 5 }}
-              size="middle"
+              pagination={false}
               columns={[
-                { title: "Dược phẩm", dataIndex: "medicine_name" },
-                { 
-                  title: "Tồn thực tế", 
-                  dataIndex: "stock",
-                  render: (val) => (
-                    <Text type="danger" strong>{val}</Text>
-                  )
-                },
-                {
-                  title: "Trạng thái",
-                  render: () => <Tag color="error">Cần nhập kho</Tag>
-                }
+                { title: "Dược phẩm", dataIndex: "medicine_name", render: (text) => <Text type="danger" strong>{text}</Text> },
+                { title: "Tồn thực tế", dataIndex: "stock", align: 'right', render: (val) => <Badge status="error" text={`${val} đơn vị`} /> },
               ]}
             />
           </Card>

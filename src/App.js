@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route ,Navigate} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AdminLayout from "./layout/AdminLayout";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
@@ -11,139 +11,72 @@ import Invoices from "./pages/Invoices";
 import Prescriptions from "./pages/Prescriptions";
 import Doctors from "./pages/Doctors";
 import Profile from "./pages/Profile";
+import SalaryManager from "./pages/SalaryManager";
+import MedicalSupplyManager from "./pages/MedicalSupplyManager";
+import DoctorDashboard from "./pages/DoctorDashboard";
+import Home from "./pages/Home";
+import SpecialtiesPage from "./components/Specialties";
+import PackagesPage from "./components/PackagesPage";
 function App() {
-  const token = localStorage.getItem("token");
-const { isAuth } = useUser();
+  const { isAuth, user } = useUser();
+
   return (
     <BrowserRouter>
       <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/specialties" element={<SpecialtiesPage />} />
+      <Route path="/packages" element={<PackagesPage />} />
         {/* 🔐 LOGIN */}
-       <Route
-          path="/login"
-          element={isAuth ? <Navigate to="/" /> : <Login />}
-        />
-
-        {/* 🏥 ADMIN */}
         <Route
-            path="/*"
+          path="/login"
             element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                  </Routes>
-                </AdminLayout>
-              </ProtectedRoute>
+              isAuth ? (
+                user?.role === "doctor" ? (
+                  <Navigate to="/doctor" replace />
+                ) : (
+                  <Navigate to="/dashboard" replace />
+                )
+              ) : (
+                <Login />
+              )
             }
           />
-          <Route
-            path="/patients"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route path="/" element={<Patients />} />
-                  </Routes>
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/medicines"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route path="/" element={<Medicines />} />
-                  </Routes>
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/appointments"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route path="/" element={<Appointments   />} />
-                  </Routes>
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/invoices"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route path="/" element={<Invoices   />} />
-                  </Routes>
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/medical-records"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route path="/" element={<Prescriptions   />} />
-                  </Routes>
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/doctors"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route path="/" element={<Doctors   />} />
-                  </Routes>
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/invoices"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route path="/" element={<Invoices   />} />
-                  </Routes>
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/analytics"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route path="/" element={<Dashboard   />} />
-                  </Routes>
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
-           <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <AdminLayout>
-                  <Routes>
-                    <Route path="/" element={<Profile   />} />
-                  </Routes>
-                </AdminLayout>
-              </ProtectedRoute>
-            }
-          />
+
+        {/* 👨‍⚕️ DOCTOR ROUTES */}
+        <Route
+          element={
+            <ProtectedRoute roles={["doctor"]}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/doctor" element={<DoctorDashboard />} />
+        </Route>
+
+        {/* 🏥 ADMIN ROUTES */}
+        <Route
+          element={
+            <ProtectedRoute roles={["admin"]}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/patients" element={<Patients />} />
+          <Route path="/salary" element={<SalaryManager />} />
+          <Route path="/medicines" element={<Medicines />} />
+          <Route path="/appointments" element={<Appointments />} />
+          <Route path="/invoices" element={<Invoices />} />
+          <Route path="/medical-records" element={<Prescriptions />} />
+          <Route path="/doctors" element={<Doctors />} />
+          <Route path="/analytics" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/medical-supplies" element={<MedicalSupplyManager />} />
+        </Route>
+
+        {/* ❌ NOT FOUND */}
+        <Route path="*" element={<Navigate to="/" />} />
+
       </Routes>
     </BrowserRouter>
   );

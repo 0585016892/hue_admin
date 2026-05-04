@@ -29,7 +29,7 @@ const Login = () => {
 
       login(res.data);
       message.success("Chào mừng bác sĩ/nhân viên quay trở lại!");
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       message.error(err.response?.data?.message || "Đăng nhập thất bại");
     } finally {
