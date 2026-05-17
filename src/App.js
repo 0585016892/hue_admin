@@ -17,6 +17,7 @@ import DoctorDashboard from "./pages/DoctorDashboard";
 import Home from "./pages/Home";
 import SpecialtiesPage from "./components/Specialties";
 import PackagesPage from "./components/PackagesPage";
+import BedPage from "./pages/BedPage";
 function App() {
   const { isAuth, user } = useUser();
 
@@ -72,6 +73,7 @@ function App() {
           <Route path="/analytics" element={<Dashboard />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/medical-supplies" element={<MedicalSupplyManager />} />
+          <Route path="/beds" element={<BedPage />} />
         </Route>
 
         {/* ❌ NOT FOUND */}

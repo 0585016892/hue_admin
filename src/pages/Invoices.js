@@ -1,6 +1,6 @@
 import {
   Table, Tag, Button, Input, Select, Modal, Form, message, Space,
-  InputNumber, Descriptions, Card, Typography, Row, Col, Divider, Popconfirm
+  InputNumber, Descriptions, Card, Typography, Row, Col, Divider, Popconfirm,Segmented
 } from "antd";
 import {
   FileProtectOutlined,
@@ -17,7 +17,7 @@ import {
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import invoiceApi from "../api/invoiceApi";
-
+import { numberToVietnamese } from "../utils/numberToVietnamese";
 const { Option } = Select;
 const { Title, Text } = Typography;
 
@@ -36,6 +36,17 @@ const Invoices = () => {
 
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailData, setDetailData] = useState(null);
+
+  const [payMethod, setPayMethod] = useState("cash"); // cash | qr
+  const [qrOpen, setQrOpen] = useState(false);
+  const [paying, setPaying] = useState(null);
+  const itemTypeLabel = {
+    bed: "Giường bệnh",
+    medicine: "Thuốc",
+    service: "Dịch vụ",
+    test: "Xét nghiệm",
+    surgery: "Phẫu thuật",
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -91,15 +102,36 @@ const Invoices = () => {
     }
   };
 
-  const handleQuickPay = async (id) => {
-    try {
-      await invoiceApi.updateStatus(id, "paid");
-      message.success("Đã xác nhận thanh toán");
-      fetchData();
-    } catch (err) {
-      message.error("Không thể cập nhật trạng thái");
+const handleQuickPay = (record) => {
+    setPaying(record);
+    if (payMethod === "qr") {
+      setQrOpen(true);
+    } else {
+      // Nếu là tiền mặt, hiện Modal xác nhận riêng hoặc dùng Popconfirm như cũ
+      confirmCashPay(record.id);
     }
   };
+const confirmCashPay = async (id) => {
+  try {
+    await invoiceApi.updateStatus(id, "paid");
+    message.success("Đã thanh toán tiền mặt");
+    fetchData();
+  } catch (err) {
+    message.error("Không thể cập nhật trạng thái");
+  }
+};
+  const getQrCodeUrl = () => {
+  if (!paying) return "";
+
+  const amount = paying.total_amount || 0;
+  const description = `THANH TOAN HOA DON INV${paying.id}`;
+
+  return `https://img.vietqr.io/image/MB-200018076666-compact.png?amount=${amount}&addInfo=${encodeURIComponent(
+    description
+  )}`;
+};
+console.log("INVOICE:::",data);
+console.log("INVOICEdetailData:::",detailData );
 
   const columns = [
     {
@@ -139,7 +171,7 @@ const Invoices = () => {
         <Space>
           <Button icon={<EyeOutlined />} onClick={() => handleViewDetail(record.id)}>Chi tiết</Button>
           {record.status !== "paid" && (
-            <Popconfirm title="Xác nhận đã thu tiền?" onConfirm={() => handleQuickPay(record.id)}>
+            <Popconfirm title="Xác nhận đã thu tiền?" onConfirm={() => handleQuickPay(record)}>
               <Button type="primary" ghost icon={<CreditCardOutlined />}>Thanh toán</Button>
             </Popconfirm>
           )}
@@ -161,33 +193,51 @@ const Invoices = () => {
           </Space>
         </Col>
         <Col>
-          <Button type="primary" icon={<PlusOutlined />} size="large" onClick={() => setOpen(true)}>
+          {/* <Button type="primary" icon={<PlusOutlined />} size="large" onClick={() => setOpen(true)}>
             Tạo hóa đơn thủ công
-          </Button>
+          </Button> */}
         </Col>
       </Row>
 
       {/* 🔍 BỘ LỌC */}
-      <Card size="small" style={{ marginBottom: 16, backgroundColor: "#fafafa" }}>
-        <Space wrap>
-          <Input
-            placeholder="Tìm theo tên bệnh nhân..."
-            prefix={<SearchOutlined />}
-            style={{ width: 300 }}
-            allowClear
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          />
-          <Select
-            placeholder="Trạng thái"
-            allowClear
-            style={{ width: 180 }}
-            onChange={(v) => { setStatus(v); setPage(1); }}
-          >
-            <Option value="paid">Đã thanh toán</Option>
-            <Option value="unpaid">Chưa thanh toán</Option>
-            <Option value="pending">Đang chờ xử lý</Option>
-          </Select>
-        </Space>
+      <Card size="small" style={{ marginBottom: 16, borderRadius: 8, boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
+        <Row gutter={[16, 16]} align="middle">
+          <Col xs={24} md={12}>
+            <Space wrap>
+              <Input
+                placeholder="Tìm tên bệnh nhân..."
+                prefix={<SearchOutlined />}
+                style={{ width: 250 }}
+                allowClear
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              />
+              <Select
+                placeholder="Trạng thái"
+                allowClear
+                style={{ width: 150 }}
+                onChange={(v) => { setStatus(v); setPage(1); }}
+              >
+                <Option value="paid">Đã thanh toán</Option>
+                <Option value="unpaid">Chưa thanh toán</Option>
+                <Option value="pending">Đang chờ</Option>
+              </Select>
+            </Space>
+          </Col>
+          
+          <Col xs={24} md={12} style={{ textAlign: 'right' }}>
+            <Space>
+              <Text strong>Phương thức thu tiền:</Text>
+              <Segmented
+                options={[
+                  { label: 'Tiền mặt', value: 'cash', icon: <DollarOutlined /> },
+                  { label: 'Chuyển khoản QR', value: 'qr', icon: <CreditCardOutlined /> },
+                ]}
+                value={payMethod}
+                onChange={setPayMethod}
+              />
+            </Space>
+          </Col>
+        </Row>
       </Card>
 
       <Table
@@ -203,8 +253,64 @@ const Invoices = () => {
           showTotal: (total) => `Tổng số ${total} hóa đơn`,
         }}
       />
+<Modal
+        open={qrOpen}
+        onCancel={() => setQrOpen(false)}
+        footer={null}
+        centered
+        width={400}
+        bodyStyle={{ padding: '24px' }}
+      >
+        {paying && (
+          <div style={{ textAlign: "center" }}>
+            <Typography.Title level={4}>Quét mã VietQR</Typography.Title>
+            <Divider style={{ margin: '12px 0' }} />
+            
+            <div style={{ background: '#f5f5f5', padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
+              <img 
+                src={getQrCodeUrl()} 
+                alt="QR Code"
+                style={{ width: '100%', borderRadius: '8px', border: '1px solid #eee' }} 
+              />
+            </div>
 
+            <Row gutter={[8, 8]} style={{ marginBottom: 20, textAlign: 'left' }}>
+              <Col span={10}><Text type="secondary">Số tiền:</Text></Col>
+              <Col span={14} style={{ textAlign: 'right' }}>
+                <Text strong style={{ color: '#cf1322', fontSize: 18 }}>
+                  {Number(paying.total_amount).toLocaleString()} đ
+                </Text>
+              </Col>
+              <Col span={10}><Text type="secondary">Nội dung:</Text></Col>
+              <Col span={14} style={{ textAlign: 'right' }}>
+                <Text code>INV{paying.id}</Text>
+              </Col>
+            </Row>
+
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Button
+                type="primary"
+                size="large"
+                block
+                icon={<CheckCircleOutlined />}
+                onClick={async () => {
+                  await invoiceApi.updateStatus(paying.id, "paid");
+                  message.success("Xác nhận thanh toán QR thành công");
+                  setQrOpen(false);
+                  fetchData();
+                }}
+              >
+                Xác nhận đã nhận tiền
+              </Button>
+              <Button block type="text" onClick={() => setQrOpen(false)}>
+                Hủy giao dịch
+              </Button>
+            </Space>
+          </div>
+        )}
+      </Modal>
       {/* ➕ MODAL CẬP NHẬT/TẠO MỚI */}
+      
       <Modal
         title={editingId ? "Cập nhật trạng thái hóa đơn" : "Tạo mới hóa đơn"}
         open={open}
@@ -290,7 +396,8 @@ const Invoices = () => {
               pagination={false}
               size="small"
               columns={[
-                { title: "Nội dung / Tên thuốc", dataIndex: "medicine_name" },
+                { title: "Nội dung", dataIndex: "description" },
+                { title: "Loại", dataIndex: "item_type" ,render: (value) => itemTypeLabel[value] || value,},
                 { title: "SL", dataIndex: "quantity", align: "center" },
                 { title: "Đơn giá", dataIndex: "unit_price", align: "right", render: (v) => Number(v).toLocaleString() + " đ" },
                 { title: "Thành tiền", align: "right", render: (_, r) => (r.quantity * r.unit_price).toLocaleString() + " đ" },
@@ -309,7 +416,7 @@ const Invoices = () => {
                 <Title level={2} style={{ color: "#cf1322", margin: 0 }}>
                   {Number(detailData.info.total_amount).toLocaleString()} VNĐ
                 </Title>
-                <Text italic type="secondary">(Bằng chữ: ........................................................................)</Text>
+                <Text italic type="secondary">  (Bằng chữ: {numberToVietnamese(Number(detailData.info.total_amount))})</Text>
               </Space>
             </div>
             

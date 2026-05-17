@@ -13,6 +13,7 @@ import {
   WhatsAppOutlined, GlobalOutlined, SafetyOutlined, FacebookFilled,LinkedinFilled,TwitterCircleFilled
 } from "@ant-design/icons";
 import { useNavigate,Link } from "react-router-dom";
+import FloatingChatBot from "../components/FloatingChatBot";
 const { Header, Content, Footer } = Layout;
 const { Title, Text, Paragraph } = Typography;
 
@@ -246,7 +247,7 @@ const HeathCareViet = () => {
             </div>
           </div>
         </Content>
-
+      <FloatingChatBot />
         <Footer style={{ textAlign: 'center', padding: '50px 10%', background: '#f8f9fa', borderTop: '1px solid #eee' }}>
           <Space direction="vertical" size="middle">
             <Title level={3} style={{ margin: 0, color: navyColor, fontWeight: 800 }}>

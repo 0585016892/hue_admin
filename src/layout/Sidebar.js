@@ -94,6 +94,11 @@ const menuItems = [
               icon: <DollarOutlined />,
               label: "Quản lý lương",
             },
+            {
+              key: "/beds",
+              icon: <DollarOutlined />,
+              label: "Quản lý giường",
+            },
           ]
         : []),
     ],
